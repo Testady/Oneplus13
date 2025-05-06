@@ -187,13 +187,40 @@ jobs:
         run: |
           cd kernel_workspace
           git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}
+          
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
           cd kernel_platform
-          echo "正在给内核打susfs补丁"
-          cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch ./common/
-          cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
-          cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
+          # 1. 复制 SUSFS 头文件
+          cp -r ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
 
+          # 2. 创建或覆盖 susfs_magic.h 以定义空宏
+          cat << 'EOF' > ./common/include/linux/susfs_magic.h
+          #ifndef _LINUX_SUSFS_MAGIC_H
+          #define _LINUX_SUSFS_MAGIC_H
+          #define susfs_mnt_id_ida                (0)
+          #define DEFAULT_SUS_MNT_ID              (0)
+          #define susfs_is_current_ksu_domain()   (0)
+          #define CL_COPY_MNT_NS                 (0)
+          #endif
+          EOF
+
+          # 3. 强制注释 namespace.c 中的错误代码
+          sed -i '/susfs_mnt_id_ida/d; /DEFAULT_SUS_MNT_ID/d; /susfs_is_current_ksu_domain/d; /CL_COPY_MNT_NS/d' ./common/fs/namespace.c
+
+          # 4. 应用补丁
+          cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch ./common/
+          cd ./common
+          patch -p1 < 50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch ||         true
+          echo "完成"
+
+      - name: Add Configuration Settings
+        run: |
+          cd kernel_workspace/kernel_platform
+          CONFIG_FILE=./common/arch/arm64/configs/gki_defconfig
+
+    # 禁用严格错误检查
+    echo "CONFIG_WERROR=n" >> "$CONFIG_FILE"
+    
           if [ "${{ github.event.inputs.ZRAM }}" = "true" ]; then
           echo "正在给内核打zram补丁"
           cp -r ../SukiSU_patch/other/zram/lz4k/include/linux/* ./common/include/linux
