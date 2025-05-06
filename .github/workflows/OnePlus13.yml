@@ -1,4 +1,4 @@
-name:OnePlus13_SukiSU Ultra
+name: OnePlus13_SukiSU Ultra
 on:
   workflow_dispatch:
     inputs:
