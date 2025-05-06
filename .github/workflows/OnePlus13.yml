@@ -191,19 +191,7 @@ jobs:
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
           cd kernel_platform
           # 1. 复制 SUSFS 头文件
-          cp -r ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
-
-          # 2. 创建或覆盖 susfs_magic.h 以定义空宏
-          cat << 'EOF' > ./common/include/linux/susfs_magic.h
-          #ifndef _LINUX_SUSFS_MAGIC_H
-          #define _LINUX_SUSFS_MAGIC_H
-          #define susfs_mnt_id_ida                (0)
-          #define DEFAULT_SUS_MNT_ID              (0)
-          #define susfs_is_current_ksu_domain()   (0)
-          #define CL_COPY_MNT_NS                 (0)
-          #endif
-          EOF
-
+          cp -r ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux
           # 3. 强制注释 namespace.c 中的错误代码
           sed -i '/susfs_mnt_id_ida/d; /DEFAULT_SUS_MNT_ID/d; /susfs_is_current_ksu_domain/d; /CL_COPY_MNT_NS/d' ./common/fs/namespace.c
 
